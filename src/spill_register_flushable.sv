@@ -39,18 +39,26 @@ module spill_register_flushable #(
     logic a_full_q;
     logic a_fill, a_drain;
 
+    T a_data_q_next;
+    assign a_data_q_next = a_fill ? data_i : a_data_q;
     always_ff @(posedge clk_i or negedge rst_ni) begin : ps_a_data
       if (!rst_ni)
         a_data_q <= T'('0);
-      else if (a_fill)
-        a_data_q <= data_i;
+      //else if (a_fill)
+      //  a_data_q <= data_i;
+      else
+        a_data_q <= a_data_q_next;
     end
 
+    logic a_full_q_next;
+    assign a_full_q_next = (a_fill || a_drain) ? a_fill : a_full_q;
     always_ff @(posedge clk_i or negedge rst_ni) begin : ps_a_full
       if (!rst_ni)
         a_full_q <= 0;
-      else if (a_fill || a_drain)
-        a_full_q <= a_fill;
+      //else if (a_fill || a_drain)
+      //  a_full_q <= a_fill;
+      else
+        a_full_q <= a_full_q_next;
     end
 
     // The B register.
@@ -58,18 +66,26 @@ module spill_register_flushable #(
     logic b_full_q;
     logic b_fill, b_drain;
 
+    T b_data_q_next;
+    assign b_data_q_next = b_fill ? a_data_q : b_data_q;
     always_ff @(posedge clk_i or negedge rst_ni) begin : ps_b_data
       if (!rst_ni)
         b_data_q <= T'('0);
-      else if (b_fill)
-        b_data_q <= a_data_q;
+      //else if (b_fill)
+      //  b_data_q <= a_data_q;
+      else
+        b_data_q <= b_data_q_next;
     end
 
+    logic b_full_q_next;
+    assign b_full_q_next = (b_fill || b_drain) ? b_fill : b_full_q;
     always_ff @(posedge clk_i or negedge rst_ni) begin : ps_b_full
       if (!rst_ni)
         b_full_q <= 0;
-      else if (b_fill || b_drain)
-        b_full_q <= b_fill;
+      //else if (b_fill || b_drain)
+      //  b_full_q <= b_fill;
+      else
+        b_full_q <= b_full_q_next;
     end
 
     // Fill the A register when the A or B register is empty. Drain the A register
