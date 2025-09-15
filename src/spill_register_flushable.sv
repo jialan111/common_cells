@@ -35,6 +35,8 @@ module spill_register_flushable #(
     assign data_o  = data_i;
   end else begin : gen_spill_reg
     // The A register.
+    // Force D-mux (no CE) on the wide data flop.
+    (* direct_enable = "false", keep = "true" *)
     T a_data_q;
     logic a_full_q;
     logic a_fill, a_drain;
@@ -62,6 +64,8 @@ module spill_register_flushable #(
     end
 
     // The B register.
+    // Force D-mux (no CE) on the wide data flop.
+    (* direct_enable = "false", keep = "true" *)
     T b_data_q;
     logic b_full_q;
     logic b_fill, b_drain;
