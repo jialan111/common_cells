@@ -36,12 +36,14 @@ module spill_register_flushable #(
   end else begin : gen_spill_reg
     // The A register.
     // Force D-mux (no CE) on the wide data flop.
-    (* direct_enable = "false", DONT_TOUCH = "true" *) T a_data_q;
+    //(* direct_enable = "false", DONT_TOUCH = "true" *) 
+    T a_data_q;
     logic a_full_q;
     logic a_fill, a_drain;
 
-    (* keep = "true" *) T a_data_q_next;
-    (* max_fanout = 16 *) logic a_fill_buf;
+    //(* keep = "true" *) 
+    T a_data_q_next;
+    (* max_fanout = 24 *) logic a_fill_buf;
     assign a_fill_buf = a_fill;
     assign a_data_q_next = a_fill_buf ? data_i : a_data_q;
     always_ff @(posedge clk_i or negedge rst_ni) begin : ps_a_data
@@ -66,12 +68,14 @@ module spill_register_flushable #(
 
     // The B register.
     // Force D-mux (no CE) on the wide data flop.
-    (* direct_enable = "false", DONT_TOUCH = "true" *) T b_data_q;
+    //(* direct_enable = "false", DONT_TOUCH = "true" *) 
+    T b_data_q;
     logic b_full_q;
     logic b_fill, b_drain;
 
-    (* keep = "true" *) T b_data_q_next;
-    (* max_fanout = 16 *) logic b_fill_buf;
+    //(* keep = "true" *) 
+    T b_data_q_next;
+    (* max_fanout = 24 *) logic b_fill_buf;
     assign b_fill_buf = b_fill;
     assign b_data_q_next = b_fill_buf ? a_data_q : b_data_q;
     always_ff @(posedge clk_i or negedge rst_ni) begin : ps_b_data
