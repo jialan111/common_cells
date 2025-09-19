@@ -34,98 +34,62 @@ module spill_register_flushable #(
     assign ready_o = ready_i;
     assign data_o  = data_i;
   end else begin : gen_spill_reg
+    
+    wire a_fill, a_drain;
+    wire b_fill, b_drain;
+
+    (* keep = "true", max_fanout = 16 *) wire a_fill_drv;
+    (* keep = "true", max_fanout = 16 *) wire a_drain_drv;
+    (* keep = "true", max_fanout = 16 *) wire b_fill_drv;
+    (* keep = "true", max_fanout = 16 *) wire b_drain_drv;
+    assign a_fill_drv  = a_fill;
+    assign a_drain_drv = a_drain;
+    assign b_fill_drv  = b_fill;
+    assign b_drain_drv = b_drain;
     // The A register.
-    // Force D-mux (no CE) on the wide data flop.
-    //(* direct_enable = "false", DONT_TOUCH = "true" *) 
     T a_data_q;
     logic a_full_q;
-    logic a_fill, a_drain;
-
-    //(* keep = "true" *) 
-    T a_data_q_next;
-    assign a_data_q_next = a_fill_drv ? data_i : a_data_q;
     always_ff @(posedge clk_i or negedge rst_ni) begin : ps_a_data
       if (!rst_ni)
         a_data_q <= T'('0);
-      //else if (a_fill)
-      //  a_data_q <= data_i;
-      else
-        a_data_q <= a_data_q_next;
+      else if (a_fill_drv)
+        a_data_q <= data_i;
     end
 
-    logic a_full_q_next;
-    assign a_full_q_next = (a_fill_drv || a_drain_drv) ? a_fill : a_full_q;
     always_ff @(posedge clk_i or negedge rst_ni) begin : ps_a_full
       if (!rst_ni)
         a_full_q <= 0;
-      //else if (a_fill || a_drain)
-      //  a_full_q <= a_fill;
-      else
-        a_full_q <= a_full_q_next;
+      else if (a_fill_drv || a_drain_drv)
+        a_full_q <= a_fill_drv;
     end
 
     // The B register.
-    // Force D-mux (no CE) on the wide data flop.
-    //(* direct_enable = "false", DONT_TOUCH = "true" *) 
     T b_data_q;
     logic b_full_q;
-    logic b_fill, b_drain;
-
-    //(* keep = "true" *) 
-    T b_data_q_next;
-    assign b_data_q_next = b_fill_drv ? a_data_q : b_data_q;
     always_ff @(posedge clk_i or negedge rst_ni) begin : ps_b_data
       if (!rst_ni)
         b_data_q <= T'('0);
-      //else if (b_fill)
-      //  b_data_q <= a_data_q;
-      else
-        b_data_q <= b_data_q_next;
+      else if (b_fill_drv)
+        b_data_q <= a_data_q;
     end
 
-    logic b_full_q_next;
-    assign b_full_q_next = (b_fill_drv || b_drain_drv) ? b_fill : b_full_q;
     always_ff @(posedge clk_i or negedge rst_ni) begin : ps_b_full
       if (!rst_ni)
         b_full_q <= 0;
-      //else if (b_fill || b_drain)
-      //  b_full_q <= b_fill;
-      else
-        b_full_q <= b_full_q_next;
+      else if (b_fill_drv || b_drain_drv)
+        b_full_q <= b_fill_drv;
     end
 
     // Fill the A register when the A or B register is empty. Drain the A register
     // whenever it is full and being filled, or if a flush is requested.
-    assign a_fill_c = valid_i && ready_o && (!flush_i);
-    assign a_drain_c = (a_full_q && !b_full_q) || flush_i;
+    assign a_fill = valid_i && ready_o && (!flush_i);
+    assign a_drain = (a_full_q && !b_full_q) || flush_i;
 
     // Fill the B register whenever the A register is drained, but the downstream
     // circuit is not ready. Drain the B register whenever it is full and the
     // downstream circuit is ready, or if a flush is requested.
-    assign b_fill_c = a_drain && (!ready_i) && (!flush_i);
-    assign b_drain_c = (b_full_q && ready_i) || flush_i;
-
-    // Register local controls for timing
-    (* max_fanout = 16 *) logic a_fill_ce,  a_drain_ce;
-    (* max_fanout = 16 *) logic b_fill_ce,  b_drain_ce;
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-      if (!rst_ni) begin
-        a_fill_ce  <= 1'b0;
-        a_drain_ce <= 1'b0;
-        b_fill_ce  <= 1'b0;
-        b_drain_ce <= 1'b0;
-      end else begin
-        a_fill_ce  <= a_fill_c;
-        a_drain_ce <= a_drain_c;
-        b_fill_ce  <= b_fill_c;
-        b_drain_ce <= b_drain_c;
-      end
-    end
-    // Using separate nets avoids the CE signals being optimized away.
-    (* max_fanout = 16 *) logic a_fill_drv  = a_fill_ce;
-    (* max_fanout = 16 *) logic a_drain_drv = a_drain_ce;
-    (* max_fanout = 16 *) logic b_fill_drv  = b_fill_ce;
-    (* max_fanout = 16 *) logic b_drain_drv = b_drain_ce;
+    assign b_fill = a_drain && (!ready_i) && (!flush_i);
+    assign b_drain = (b_full_q && ready_i) || flush_i;
 
     // We can accept input as long as register B is not full.
     // Note: flush_i and valid_i must not be high at the same time,
